@@ -107,6 +107,8 @@ public class DeviceScanActivity extends ListActivity {
         bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
 
+        mLeDeviceListAdapter = new LeDeviceListAdapter();
+
         // Checks if Bluetooth is supported on the device.
         if (mBluetoothAdapter == null) {
             Toast.makeText(this, R.string.error_bluetooth_not_supported, Toast.LENGTH_SHORT).show();
@@ -114,16 +116,7 @@ public class DeviceScanActivity extends ListActivity {
             return;
         }
 
-        // Don't check this in the onResume because it can trigger repeated calling of onPause and onResume
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, PERMISSION);
-        }
+        askPermissions();
 
     }
 
@@ -131,7 +124,6 @@ public class DeviceScanActivity extends ListActivity {
     protected void onResume() {
         super.onResume();
         Log.d(TAG,"onResume ");
-
         // Ensures Bluetooth is enabled on the device.  If Bluetooth is not currently enabled,
         // fire an intent to display a dialog asking the user to grant permission to enable it.
         if (!mBluetoothAdapter.isEnabled()) {
@@ -140,9 +132,9 @@ public class DeviceScanActivity extends ListActivity {
         }
 
         // Initializes list view adapter.
-        mLeDeviceListAdapter = new LeDeviceListAdapter();
+        // Keep the results in the list: mLeDeviceListAdapter = new LeDeviceListAdapter();
         setListAdapter(mLeDeviceListAdapter);
-        scanLeDevice(true);
+        // Don't start automatically anymore:   scanLeDevice(true);
     }
 
     @Override
@@ -150,8 +142,8 @@ public class DeviceScanActivity extends ListActivity {
         super.onPause();
         Log.d(TAG,"onPause ");
 
-        //startStopOperations(false);
-        mLeDeviceListAdapter.clear();
+        // startStopOperations(false);
+        // mLeDeviceListAdapter.clear();
     }
 
     @Override
@@ -195,11 +187,6 @@ public class DeviceScanActivity extends ListActivity {
     }
 
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
     private void startStopOperations(boolean enable) {
         Log.i(TAG, "startStopOperations: enable " + enable);
         scanLeDevice(enable);
@@ -232,10 +219,35 @@ public class DeviceScanActivity extends ListActivity {
         startActivity(intent);
     }
 
+    private void askPermissions(){
+        // Don't check this in the onResume because it can trigger repeated calling of onPause and onResume
+        if (ContextCompat.checkSelfPermission(DeviceScanActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(DeviceScanActivity.this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION);
+        }
+        if (ContextCompat.checkSelfPermission(DeviceScanActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(DeviceScanActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION);
+        }
+        if (ContextCompat.checkSelfPermission(DeviceScanActivity.this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(DeviceScanActivity.this, new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, PERMISSION);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "Permission DENIED by user " + requestCode);
+        } else {
+            Log.d(TAG, "Permission GRANTED by user " + requestCode);
+        }
+
+    }
+
     private void scanLeDevice(final boolean enable) {
         Log.d(TAG,"scanLeDevice " + enable);
         if (enable) {
             //scanning until stopped
+            mLeDeviceListAdapter.clear();
             mBluetoothAdapter.getBluetoothLeScanner().startScan(buildScanFilters(), buildScanSettings(), scanCallback);
             scanning = true;
         } else {
